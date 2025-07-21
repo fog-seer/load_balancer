@@ -1,0 +1,51 @@
+# Create and Start Simple HTTP Servers
+
+```elixir
+Mix.install([
+  {:bandit, "~> 1.7"},
+  {:req, "~> 0.5.15"}
+])
+```
+
+## Create and Start servers
+
+```elixir
+ports = [
+  4005,
+  4006,
+  4007,
+  4008,
+  4009,
+  4010
+]
+```
+
+```elixir
+defmodule SimpleServer.Router do
+  use Plug.Router
+
+  plug :match
+  plug :dispatch
+
+  match _ do
+    send_resp(conn, 200, "Hello from #{conn.port}. Echo #{inspect(conn)}")
+  end
+end
+```
+
+```elixir
+children = for port <- ports do
+  {Bandit, plug: SimpleServer.Router, port: port}
+end
+
+opts = [strategy: :one_for_one, name: SimpleServer.Supervisor]
+Supervisor.start_link(children, opts)
+```
+
+```elixir
+children_health = for port <- ports do
+  Req.get!("http://localhost:#{port}").status == 200
+end
+
+children_health
+```
